@@ -6,11 +6,12 @@ from PyQt5.QtGui import QImage, QPixmap
 
 
 class VideoPlayer(QWidget):
-    def __init__(self, video_path, start_frame):
+    def __init__(self, video_path, audio_path, start_frame):
         super().__init__()
         self.is_video_paused = False
         # Inputs
         self.video_path = video_path
+        self.audio_path = audio_path
         self.start_frame = start_frame
         self.cap = cv2.VideoCapture(self.video_path)
         self.video_fps = self.cap.get(cv2.CAP_PROP_FPS)
@@ -19,11 +20,11 @@ class VideoPlayer(QWidget):
         self.displayInitialFrame()
 
         # Initialize pygame mixer
-        pygame.mixer.init()
+        pygame.init()
 
         # Load the audio from the video file
         try:
-            pygame.mixer.music.load(self.video_path)
+            pygame.mixer.music.load(self.audio_path)
         except Exception as e:
             print(f"Error loading audio: {e}")
 
@@ -65,10 +66,9 @@ class VideoPlayer(QWidget):
         self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.start_frame)
         self.timer.setInterval(int(1000 / self.video_fps))
 
-        if not pygame.mixer.music.get_busy():
-            start_time_sec = self.start_frame / self.video_fps
-            self.timer.start()
-            pygame.mixer.music.play(start=start_time_sec)
+        start_time_sec = self.start_frame / self.video_fps
+        self.timer.start()
+        pygame.mixer.music.play(loops=1, start=start_time_sec)
 
         self.playBtn.setEnabled(False)
         self.pauseBtn.setEnabled(True)
@@ -99,6 +99,7 @@ class VideoPlayer(QWidget):
         pygame.mixer.music.stop()
         pygame.mixer.music.play(start=0)
         self.showFrame()
+        self.pauseVideo()
 
         self.playBtn.setEnabled(True)
         self.pauseBtn.setEnabled(False)

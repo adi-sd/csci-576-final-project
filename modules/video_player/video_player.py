@@ -6,12 +6,17 @@ from PyQt5.QtGui import QImage, QPixmap
 
 
 class VideoPlayer(QWidget):
-    def __init__(self, video_path, start_time):
+    def __init__(self, video_path, start_frame):
         super().__init__()
         self.is_video_paused = False
+        # Inputs
         self.video_path = video_path
-        self.start_time = start_time
+        self.start_frame = start_frame
+        self.cap = cv2.VideoCapture(self.video_path)
+        self.video_fps = self.cap.get(cv2.CAP_PROP_FPS)
+
         self.initUI()
+        self.displayInitialFrame()
 
         # Initialize pygame mixer
         pygame.mixer.init()
@@ -57,18 +62,17 @@ class VideoPlayer(QWidget):
         self.cap = None
 
     def playVideo(self):
-        if self.cap is None:
-            self.cap = cv2.VideoCapture(self.video_path)
-            fps = self.cap.get(cv2.CAP_PROP_FPS)
-            self.cap.set(cv2.CAP_PROP_POS_MSEC, self.start_time * 1000)
-            self.timer.setInterval(int(1000 / fps))
+        self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.start_frame)
+        self.timer.setInterval(int(1000 / self.video_fps))
 
         if not pygame.mixer.music.get_busy():
-            pygame.mixer.music.play(start=self.start_time)
+            start_time_sec = self.start_frame / self.video_fps
+            self.timer.start()
+            pygame.mixer.music.play(start=start_time_sec)
 
+        self.playBtn.setEnabled(False)
         self.pauseBtn.setEnabled(True)
         self.resetBtn.setEnabled(True)
-        self.timer.start()
 
     def togglePause(self):
         if self.is_video_paused:
@@ -90,15 +94,26 @@ class VideoPlayer(QWidget):
 
     def resetVideo(self):
         self.timer.stop()
-        self.cap.set(cv2.CAP_PROP_POS_MSEC, 0)
+        self.cap = cv2.VideoCapture(self.video_path)
+        self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
         pygame.mixer.music.stop()
         pygame.mixer.music.play(start=0)
-        self.nextFrame()
+        self.showFrame()
 
-    def nextFrame(self):
+        self.playBtn.setEnabled(True)
+        self.pauseBtn.setEnabled(False)
+        self.resetBtn.setEnabled(False)
+
+    def displayInitialFrame(self):
+        self.cap = cv2.VideoCapture(self.video_path)
+        self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.start_frame)
+        self.showFrame()
+        # self.cap.release()
+
+    def showFrame(self):
         ret, frame = self.cap.read()
         if ret:
-            rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            rgb_image = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
             h, w, ch = rgb_image.shape
             bytes_per_line = ch * w
             convert_to_Qt_format = QImage(
@@ -106,3 +121,6 @@ class VideoPlayer(QWidget):
             )
             p = convert_to_Qt_format.scaled(800, 800, Qt.KeepAspectRatio)
             self.label.setPixmap(QPixmap.fromImage(p))
+
+    def nextFrame(self):
+        self.showFrame()

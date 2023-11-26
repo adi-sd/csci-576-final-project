@@ -5,7 +5,7 @@ from modules.video_player.video_player import VideoPlayer
 
 def main():
     app = QApplication(sys.argv)
-    player = VideoPlayer("./resources/video11.mp4", 0)
+    player = VideoPlayer("./resources/video11.mp4", 100)
     player.show()
     sys.exit(app.exec_())
 

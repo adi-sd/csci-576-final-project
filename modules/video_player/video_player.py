@@ -1,6 +1,13 @@
 import cv2
 import pygame
-from PyQt5.QtWidgets import QWidget, QPushButton, QLabel, QVBoxLayout, QHBoxLayout
+from PyQt5.QtWidgets import (
+    QWidget,
+    QPushButton,
+    QLabel,
+    QVBoxLayout,
+    QHBoxLayout,
+    QSlider,
+)
 from PyQt5.QtCore import QTimer, Qt
 from PyQt5.QtGui import QImage, QPixmap
 
@@ -38,6 +45,15 @@ class VideoPlayer(QWidget):
         self.vbox.addWidget(self.label)
         self.setLayout(self.vbox)
 
+        # Seeker
+        self.seek_slider = QSlider(Qt.Horizontal)
+        self.seek_slider.setMinimum(0)
+        self.seek_slider.setMaximum(int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT)))
+        self.seek_slider.setValue(self.start_frame)
+        self.seek_slider.sliderMoved.connect(self.seekVideo)
+
+        self.vbox.addWidget(self.seek_slider)
+
         # Buttons
         self.bbox = QHBoxLayout()
         self.playBtn = QPushButton("Play", self)
@@ -63,10 +79,10 @@ class VideoPlayer(QWidget):
         self.cap = None
 
     def playVideo(self):
-        self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.start_frame)
+        self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.seek_slider.value())
         self.timer.setInterval(int(1000 / self.video_fps))
 
-        start_time_sec = self.start_frame / self.video_fps
+        start_time_sec = self.seek_slider.value() / self.video_fps
         self.timer.start()
         pygame.mixer.music.play(loops=1, start=start_time_sec)
 
@@ -96,6 +112,7 @@ class VideoPlayer(QWidget):
         self.timer.stop()
         self.cap = cv2.VideoCapture(self.video_path)
         self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+        self.seek_slider.setValue(0)  # Update the slider value to the start frame
         pygame.mixer.music.stop()
         pygame.mixer.music.play(start=0)
         self.showFrame()
@@ -107,14 +124,14 @@ class VideoPlayer(QWidget):
 
     def displayInitialFrame(self):
         self.cap = cv2.VideoCapture(self.video_path)
-        self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.start_frame)
+        self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.seek_slider.value())
         self.showFrame()
         # self.cap.release()
 
     def showFrame(self):
         ret, frame = self.cap.read()
         if ret:
-            rgb_image = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+            rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  # Fix color order
             h, w, ch = rgb_image.shape
             bytes_per_line = ch * w
             convert_to_Qt_format = QImage(
@@ -124,4 +141,10 @@ class VideoPlayer(QWidget):
             self.label.setPixmap(QPixmap.fromImage(p))
 
     def nextFrame(self):
+        current_frame = int(self.cap.get(cv2.CAP_PROP_POS_FRAMES))
+        self.seek_slider.setValue(current_frame)
+        self.showFrame()
+
+    def seekVideo(self, value):
+        self.cap.set(cv2.CAP_PROP_POS_FRAMES, value)
         self.showFrame()

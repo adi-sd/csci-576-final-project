@@ -1,4 +1,4 @@
-# Video and Audio Search & Indexing System
+# Video Library Search with Video Clip Query
 
 This project, developed as part of the CSCI 576 Multimedia Systems course at USC (Fall 2023), focuses on creating a system to search and index videos and audio snippets. The system allows users to query a database of videos using a short video snippet with synchronized audio and retrieves the exact match along with its starting position in the database video.
 
